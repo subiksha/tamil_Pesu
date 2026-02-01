@@ -353,9 +353,12 @@ def single_generation_mode():
                         output_file = str(output_dir / f"edge_{timestamp}.mp3")
                         asyncio.run(generate_edge_tts(tamil_text, voice_id, output_file))
                     
-                    elif "Murf" in engine:
-                        output_file = str(output_dir / f"murf_{timestamp}.mp3")
-                        generate_murf_tts(tamil_text, selected_murf_voice, api_key, output_file)
+                    elif "HuggingFace" in engine:
+                        if not speaker_file_path:
+                            st.error("Please upload a voice sample!")
+                            return
+                        output_file = str(output_dir / f"hf_{timestamp}.wav")
+                        generate_hf_voice_clone(tamil_text, speaker_file_path, hf_token, output_file)
                     
                     else:  # gTTS
                         output_file = str(output_dir / f"gtts_{timestamp}.mp3")
