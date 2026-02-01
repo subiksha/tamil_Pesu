@@ -210,9 +210,21 @@ def single_generation_mode():
     col1, col2 = st.columns([2, 1])
     
     with col1:
+        available_engines = []
+        if EDGE_TTS_AVAILABLE:
+            available_engines.append("Edge TTS (Microsoft)")
+        if GTTS_AVAILABLE:
+            available_engines.append("gTTS (Google)")
+        if COQUI_AVAILABLE:
+            available_engines.append("Coqui XTTS (Voice Cloning)")
+        
+        if not available_engines:
+            st.error("No TTS engines available!")
+            return
+            
         engine = st.selectbox(
             "Select Engine",
-            ["Edge TTS (Microsoft)", "Coqui XTTS (Voice Cloning)", "gTTS (Google)"],
+            available_engines,
             help="Choose TTS engine"
         )
     
