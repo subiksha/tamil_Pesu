@@ -19,7 +19,7 @@ except ImportError:
     EDGE_TTS_AVAILABLE = False
 
 try:
-    from TTS.api import TTS
+    from coqui_tts.api import TTS
     import torch
     COQUI_AVAILABLE = True
 except ImportError:
@@ -122,6 +122,9 @@ async def generate_edge_tts(text, voice, output_file):
 
 def generate_coqui_tts(text, speaker_wav, output_file):
     """Generate speech using Coqui TTS"""
+    if not COQUI_AVAILABLE:
+        raise ImportError("Coqui TTS not available")
+    
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     # Initialize TTS only once using session state
@@ -244,6 +247,10 @@ def single_generation_mode():
         st.info(f"**Selected**: {vinfo['flag']} {vinfo['name']} ({vinfo['gender']}, {vinfo['region']})")
     
     elif "Coqui" in engine:
+        if not COQUI_AVAILABLE:
+            st.error("❌ Coqui TTS not available. Install with: pip install TTS torch")
+            return
+        
         st.subheader("🎯 Voice Cloning Setup")
         
         speaker_file = st.file_uploader(
