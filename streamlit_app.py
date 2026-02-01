@@ -19,7 +19,7 @@ except ImportError:
     EDGE_TTS_AVAILABLE = False
 
 try:
-    from coqui_tts.api import TTS
+    from TTS.api import TTS
     import torch
     COQUI_AVAILABLE = True
 except ImportError:
