@@ -19,17 +19,16 @@ except ImportError:
     EDGE_TTS_AVAILABLE = False
 
 try:
-    from TTS.api import TTS
-    import torch
-    COQUI_AVAILABLE = True
-except ImportError:
-    COQUI_AVAILABLE = False
-
-try:
     from gtts import gTTS
     GTTS_AVAILABLE = True
 except ImportError:
     GTTS_AVAILABLE = False
+
+try:
+    import requests
+    MURF_AVAILABLE = True
+except ImportError:
+    MURF_AVAILABLE = False
 
 
 # Page configuration
@@ -120,24 +119,33 @@ async def generate_edge_tts(text, voice, output_file):
     await communicate.save(output_file)
 
 
-def generate_coqui_tts(text, speaker_wav, output_file):
-    """Generate speech using Coqui TTS"""
-    if not COQUI_AVAILABLE:
-        raise ImportError("Coqui TTS not available")
+def generate_murf_tts(text, voice_id, api_key, output_file):
+    """Generate speech using Murf.ai API"""
+    if not MURF_AVAILABLE:
+        raise ImportError("Requests library not available")
     
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Murf API endpoint
+    url = "https://api.murf.ai/v1/speech/generate"
     
-    # Initialize TTS only once using session state
-    if 'tts_model' not in st.session_state:
-        with st.spinner("Loading voice cloning model... (first time only)"):
-            st.session_state.tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
     
-    st.session_state.tts_model.tts_to_file(
-        text=text,
-        speaker_wav=speaker_wav,
-        language="ta",
-        file_path=output_file
-    )
+    payload = {
+        "text": text,
+        "voiceId": voice_id,
+        "format": "mp3",
+        "sampleRate": 22050
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        with open(output_file, 'wb') as f:
+            f.write(response.content)
+    else:
+        raise Exception(f"Murf API error: {response.status_code} - {response.text}")
 
 
 def generate_gtts(text, output_file):
@@ -177,10 +185,10 @@ def main():
         else:
             st.error("❌ Edge TTS")
             
-        if COQUI_AVAILABLE:
-            st.success("✅ Coqui XTTS (Cloning)")
+        if MURF_AVAILABLE:
+            st.success("✅ Murf.ai (Voice Cloning)")
         else:
-            st.warning("⚠️ Coqui XTTS")
+            st.warning("⚠️ Murf.ai API")
             
         if GTTS_AVAILABLE:
             st.success("✅ Google TTS")
@@ -215,8 +223,8 @@ def single_generation_mode():
             available_engines.append("Edge TTS (Microsoft)")
         if GTTS_AVAILABLE:
             available_engines.append("gTTS (Google)")
-        if COQUI_AVAILABLE:
-            available_engines.append("Coqui XTTS (Voice Cloning)")
+        if MURF_AVAILABLE:
+            available_engines.append("Murf.ai (Voice Cloning)")
         
         if not available_engines:
             st.error("No TTS engines available!")
@@ -258,26 +266,42 @@ def single_generation_mode():
         vinfo = EDGE_VOICES[voice_id]
         st.info(f"**Selected**: {vinfo['flag']} {vinfo['name']} ({vinfo['gender']}, {vinfo['region']})")
     
-    elif "Coqui" in engine:
-        if not COQUI_AVAILABLE:
-            st.error("❌ Coqui TTS not available. Install with: pip install TTS torch")
+    elif "Murf" in engine:
+        if not MURF_AVAILABLE:
+            st.error("❌ Murf.ai API not available")
             return
         
-        st.subheader("🎯 Voice Cloning Setup")
+        st.subheader("🎯 Murf.ai Voice Cloning")
         
-        speaker_file = st.file_uploader(
-            "Upload Voice Sample (WAV/MP3, 3-10 seconds)",
-            type=['wav', 'mp3'],
-            help="Upload clear audio of the target voice"
+        # API Key input
+        api_key = st.text_input(
+            "Murf.ai API Key",
+            type="password",
+            help="Enter your Murf.ai API key"
         )
         
-        if speaker_file:
-            speaker_file_path = "temp_speaker.wav"
-            with open(speaker_file_path, "wb") as f:
-                f.write(speaker_file.getvalue())
-            
-            st.success(f"✅ Uploaded: {speaker_file.name}")
-            st.audio(speaker_file)
+        if not api_key:
+            st.warning("🔑 Please enter your Murf.ai API key to continue")
+            st.info("📝 Get your API key from: https://murf.ai/api")
+            return
+        
+        # Voice selection for Murf
+        murf_voices = {
+            "en-US-AriaNeural": "Aria (Female, US)",
+            "en-US-JennyNeural": "Jenny (Female, US)", 
+            "en-US-GuyNeural": "Guy (Male, US)",
+            "en-IN-NeerjaNeural": "Neerja (Female, India)",
+            "en-IN-PrabhatNeural": "Prabhat (Male, India)"
+        }
+        
+        selected_murf_voice = st.selectbox(
+            "Select Murf Voice",
+            list(murf_voices.keys()),
+            format_func=lambda x: murf_voices[x],
+            help="Choose a Murf.ai voice for synthesis"
+        )
+        
+        st.info(f"✨ Selected: {murf_voices[selected_murf_voice]}")
     
     # Text input
     st.subheader("📝 Text Input")
@@ -324,12 +348,9 @@ def single_generation_mode():
                         output_file = str(output_dir / f"edge_{timestamp}.mp3")
                         asyncio.run(generate_edge_tts(tamil_text, voice_id, output_file))
                     
-                    elif "Coqui" in engine:
-                        if not speaker_file_path:
-                            st.error("Please upload a voice sample!")
-                            return
-                        output_file = str(output_dir / f"cloned_{timestamp}.wav")
-                        generate_coqui_tts(tamil_text, speaker_file_path, output_file)
+                    elif "Murf" in engine:
+                        output_file = str(output_dir / f"murf_{timestamp}.mp3")
+                        generate_murf_tts(tamil_text, selected_murf_voice, api_key, output_file)
                     
                     else:  # gTTS
                         output_file = str(output_dir / f"gtts_{timestamp}.mp3")
