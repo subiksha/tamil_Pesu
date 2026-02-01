@@ -10,6 +10,7 @@ gtts>=2.3.0
 
 # API requests
 requests>=2.31.0
+huggingface_hub>=0.20.0
 
 # Data Processing
 pandas>=2.0.0

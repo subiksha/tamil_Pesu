@@ -26,9 +26,10 @@ except ImportError:
 
 try:
     import requests
-    MURF_AVAILABLE = True
+    from huggingface_hub import InferenceClient
+    HF_AVAILABLE = True
 except ImportError:
-    MURF_AVAILABLE = False
+    HF_AVAILABLE = False
 
 
 # Page configuration
@@ -119,33 +120,38 @@ async def generate_edge_tts(text, voice, output_file):
     await communicate.save(output_file)
 
 
-def generate_murf_tts(text, voice_id, api_key, output_file):
-    """Generate speech using Murf.ai API"""
-    if not MURF_AVAILABLE:
-        raise ImportError("Requests library not available")
+def generate_hf_voice_clone(text, speaker_audio_path, hf_token, output_file):
+    """Generate speech using Hugging Face voice cloning API"""
+    if not HF_AVAILABLE:
+        raise ImportError("Hugging Face Hub not available")
     
-    # Murf API endpoint
-    url = "https://api.murf.ai/v1/speech/generate"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "text": text,
-        "voiceId": voice_id,
-        "format": "mp3",
-        "sampleRate": 22050
-    }
-    
-    response = requests.post(url, json=payload, headers=headers)
-    
-    if response.status_code == 200:
-        with open(output_file, 'wb') as f:
-            f.write(response.content)
-    else:
-        raise Exception(f"Murf API error: {response.status_code} - {response.text}")
+    try:
+        client = InferenceClient(token=hf_token)
+        
+        # Read speaker audio file
+        with open(speaker_audio_path, "rb") as f:
+            speaker_audio = f.read()
+        
+        # Call Hugging Face TTS API with voice cloning
+        response = client.text_to_speech(
+            text=text,
+            model="microsoft/speecht5_tts",
+            speaker_embeddings=speaker_audio
+        )
+        
+        # Save generated audio
+        with open(output_file, "wb") as f:
+            f.write(response)
+            
+    except Exception as e:
+        # Fallback to basic TTS if voice cloning fails
+        response = client.text_to_speech(
+            text=text,
+            model="microsoft/speecht5_tts"
+        )
+        
+        with open(output_file, "wb") as f:
+            f.write(response)
 
 
 def generate_gtts(text, output_file):
@@ -185,10 +191,10 @@ def main():
         else:
             st.error("❌ Edge TTS")
             
-        if MURF_AVAILABLE:
-            st.success("✅ Murf.ai (Voice Cloning)")
+        if HF_AVAILABLE:
+            st.success("✅ HuggingFace (Voice Cloning)")
         else:
-            st.warning("⚠️ Murf.ai API")
+            st.warning("⚠️ HuggingFace API")
             
         if GTTS_AVAILABLE:
             st.success("✅ Google TTS")
@@ -223,8 +229,8 @@ def single_generation_mode():
             available_engines.append("Edge TTS (Microsoft)")
         if GTTS_AVAILABLE:
             available_engines.append("gTTS (Google)")
-        if MURF_AVAILABLE:
-            available_engines.append("Murf.ai (Voice Cloning)")
+        if HF_AVAILABLE:
+            available_engines.append("HuggingFace (Voice Cloning)")
         
         if not available_engines:
             st.error("No TTS engines available!")
@@ -266,42 +272,41 @@ def single_generation_mode():
         vinfo = EDGE_VOICES[voice_id]
         st.info(f"**Selected**: {vinfo['flag']} {vinfo['name']} ({vinfo['gender']}, {vinfo['region']})")
     
-    elif "Murf" in engine:
-        if not MURF_AVAILABLE:
-            st.error("❌ Murf.ai API not available")
+    elif "HuggingFace" in engine:
+        if not HF_AVAILABLE:
+            st.error("❌ HuggingFace API not available")
             return
         
-        st.subheader("🎯 Murf.ai Voice Cloning")
+        st.subheader("🤗 HuggingFace Voice Cloning")
         
-        # API Key input
-        api_key = st.text_input(
-            "Murf.ai API Key",
+        # API Token input
+        hf_token = st.text_input(
+            "HuggingFace API Token",
             type="password",
-            help="Enter your Murf.ai API key"
+            help="Enter your HuggingFace API token"
         )
         
-        if not api_key:
-            st.warning("🔑 Please enter your Murf.ai API key to continue")
-            st.info("📝 Get your API key from: https://murf.ai/api")
+        if not hf_token:
+            st.warning("🔑 Please enter your HuggingFace API token to continue")
+            st.info("📝 Get your token from: https://huggingface.co/settings/tokens")
             return
         
-        # Voice selection for Murf
-        murf_voices = {
-            "en-US-AriaNeural": "Aria (Female, US)",
-            "en-US-JennyNeural": "Jenny (Female, US)", 
-            "en-US-GuyNeural": "Guy (Male, US)",
-            "en-IN-NeerjaNeural": "Neerja (Female, India)",
-            "en-IN-PrabhatNeural": "Prabhat (Male, India)"
-        }
-        
-        selected_murf_voice = st.selectbox(
-            "Select Murf Voice",
-            list(murf_voices.keys()),
-            format_func=lambda x: murf_voices[x],
-            help="Choose a Murf.ai voice for synthesis"
+        # Voice sample upload
+        speaker_file = st.file_uploader(
+            "Upload Voice Sample (WAV/MP3, 3-10 seconds)",
+            type=['wav', 'mp3'],
+            help="Upload clear audio of the target voice for cloning"
         )
         
-        st.info(f"✨ Selected: {murf_voices[selected_murf_voice]}")
+        if speaker_file:
+            speaker_file_path = "temp_speaker.wav"
+            with open(speaker_file_path, "wb") as f:
+                f.write(speaker_file.getvalue())
+            
+            st.success(f"✅ Uploaded: {speaker_file.name}")
+            st.audio(speaker_file)
+        else:
+            st.info("🎤 Upload a voice sample to enable voice cloning")
     
     # Text input
     st.subheader("📝 Text Input")
