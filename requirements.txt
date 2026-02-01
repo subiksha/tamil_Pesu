@@ -1,0 +1,19 @@
+# Tamil TTS Streamlit App Requirements
+# Optimized for Streamlit Cloud deployment
+
+# Core Streamlit
+streamlit>=1.28.0
+
+# TTS Engines
+edge-tts>=6.1.0
+gtts>=2.3.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Optional: Coqui TTS (Heavy - may cause deployment issues)
+# TTS>=0.22.0
+# torch>=2.0.0
+# librosa>=0.10.0
+# soundfile>=0.12.0
