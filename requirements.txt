@@ -1,0 +1,42 @@
+# Requirements for Tamil TTS Streamlit Apps
+# Install with: pip install -r requirements_streamlit.txt --break-system-packages
+
+# ===== CORE =====
+streamlit>=1.28.0
+asyncio-compat>=0.1.0
+
+
+# ===== TTS ENGINES =====
+# Edge TTS - Microsoft voices (6 Tamil voices, FREE, High Quality)
+edge-tts>=6.1.0
+
+# Coqui TTS - Voice cloning (Optional but recommended)
+TTS>=0.22.0
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Google TTS - Basic Tamil TTS (Optional)
+gtts>=2.3.0
+
+
+# ===== DATA PROCESSING =====
+pandas>=2.0.0
+numpy>=1.24.0
+
+
+# ===== AUDIO PROCESSING =====
+# Required for voice cloning features
+librosa>=0.10.0
+soundfile>=0.12.0
+scipy>=1.11.0
+
+
+# ===== UTILITIES =====
+pathlib2>=2.3.0
+
+
+# ===== OPTIONAL =====
+# For advanced features
+# matplotlib>=3.7.0  # Uncomment for audio visualization
+# pydub>=0.25.0      # Uncomment for audio format conversion
