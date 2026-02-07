@@ -1,25 +1,23 @@
-# Tamil TTS + QuickVC Voice Conversion Requirements
-# Streamlit app for Tamil text-to-speech with voice conversion
+# Tamil TTS + SpeechT5 Voice Conversion
+# Hugging Face Spaces Compatible
 
-# Core Streamlit
+# Core
 streamlit>=1.28.0
 
-# TTS Engines
+# TTS
 gtts>=2.3.0
-edge-tts>=6.1.0
 
 # Audio Processing
 librosa>=0.10.0
 soundfile>=0.12.0
 
-# Deep Learning (for QuickVC)
+# ML/DL - Hugging Face Spaces has these pre-installed
 torch>=2.0.0
 torchaudio>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+
+# Utilities
 numpy>=1.24.0
-
-# Data Processing
-pandas>=2.0.0
-
-# API requests (for additional features)
-requests>=2.31.0
-huggingface_hub>=0.20.0
